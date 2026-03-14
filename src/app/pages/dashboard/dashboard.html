@@ -4,7 +4,7 @@
       <h2 class="page-title">Dashboard</h2>
       <p class="page-subtitle">Visão geral em tempo real</p>
     </div>
-    <button class="btn-secondary" (click)="load()" [disabled]="loading">
+    <button class="btn-secondary" (click)="loadDashboardData()" [disabled]="loading()">
       <svg
         width="14"
         height="14"
@@ -12,7 +12,7 @@
         fill="none"
         stroke="currentColor"
         stroke-width="2"
-        [class.animate-spin]="loading"
+        [class.animate-spin]="loading()"
         aria-hidden="true"
       >
         <path d="M1 4v6h6M23 20v-6h-6" />
@@ -28,7 +28,7 @@
     role="region"
     aria-label="Indicadores do sistema"
   >
-    @for (stat of stats; track stat.label; let i = $index) {
+    @for (stat of stats(); track stat.label; let i = $index) {
       <div class="stat-card" [style.animation-delay]="i * 0.07 + 's'">
         <div class="flex items-center justify-between mb-3">
           <span
@@ -44,7 +44,7 @@
           </div>
         </div>
         <div class="text-2xl font-heading font-black mb-1" style="color: var(--text-primary)">
-          @if (loading) {
+          @if (loading()) {
             <span class="opacity-30">—</span>
           } @else {
             {{ stat.value }}
@@ -57,6 +57,7 @@
 
   <!-- Bottom panels -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
     <!-- Recent appointments -->
     <div class="card p-5" role="region" aria-label="Agendamentos recentes">
       <div class="flex items-center justify-between mb-4">
@@ -71,7 +72,8 @@
           >Ver todos →</a
         >
       </div>
-      @if (loading) {
+
+      @if (loading()) {
         <div class="space-y-3">
           @for (i of [1, 2, 3]; track i) {
             <div
@@ -80,13 +82,13 @@
             ></div>
           }
         </div>
-      } @else if (appointments.length === 0) {
+      } @else if (appointments().length === 0) {
         <div class="text-center py-8 text-sm" style="color: var(--text-muted)">
           Nenhum agendamento cadastrado
         </div>
       } @else {
         <div class="space-y-2">
-          @for (a of appointments; track a.id) {
+          @for (a of appointments(); track a.id) {
             <div
               class="flex items-center justify-between py-2.5 px-3 rounded-lg transition-colors"
               style="border-bottom: 1px solid var(--surface-border)"
@@ -126,7 +128,8 @@
           >Ver todas →</a
         >
       </div>
-      @if (loading) {
+
+      @if (loading()) {
         <div class="space-y-3">
           @for (i of [1, 2, 3]; track i) {
             <div
@@ -135,13 +138,13 @@
             ></div>
           }
         </div>
-      } @else if (branches.length === 0) {
+      } @else if (branches().length === 0) {
         <div class="text-center py-8 text-sm" style="color: var(--text-muted)">
           Nenhuma filial cadastrada
         </div>
       } @else {
         <div class="space-y-2">
-          @for (b of branches; track b.id) {
+          @for (b of branches(); track b.id) {
             <div
               class="flex items-center gap-3 py-2.5 px-3 rounded-lg"
               style="border-bottom: 1px solid var(--surface-border)"
@@ -166,5 +169,6 @@
         </div>
       }
     </div>
+
   </div>
 </div>

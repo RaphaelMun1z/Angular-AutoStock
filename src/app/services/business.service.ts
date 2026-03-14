@@ -171,8 +171,8 @@ export class AppointmentService {
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   constructor(private api: ApiService) {}
-  getAll(): Observable<Admin[]> {
-    return this.api['http'].get<Admin[]>(`${this.api.BASE}/adm`);
+  getAll(page = 0, size = 50) {
+    return this.api.getAll<Admin>('/adm', page, size);
   }
   create(a: AdminRegisterRequest) {
     return this.api.create<Admin>('/adm', a);

@@ -1,13 +1,7 @@
-import {
-  Component,
-  OnInit,
-  inject,
-  ChangeDetectorRef,
-  ChangeDetectionStrategy,
-} from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { forkJoin, catchError, of } from 'rxjs';
+import { catchError, of } from 'rxjs';
 import { ApiService } from '../../services/api.service';
 import {
   formatDate,
@@ -16,9 +10,11 @@ import {
   aptStatusLabel,
   aptStatusClass,
 } from '../../shared/helpers/formatters.helper';
+import { AppointmentResponse, DashboardSummary } from '../../shared/interfaces/models.interface';
 
 @Component({
   selector: 'app-dashboard',
+  standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
@@ -26,12 +22,11 @@ import {
 })
 export class Dashboard implements OnInit {
   private api = inject(ApiService);
-  private cdr = inject(ChangeDetectorRef);
 
-  loading = true;
-  stats = this.buildStats(0, 0, 0, 0);
-  appointments: any[] = [];
-  branches: any[] = [];
+  loading = signal(true);
+  stats = signal<any[]>([]);
+  appointments = signal<any[]>([]);
+  branches = signal<any[]>([]);
 
   fmtDate = formatDate;
   aptTypeLabel = aptTypeLabel;
@@ -40,36 +35,62 @@ export class Dashboard implements OnInit {
   aptStatusClass = aptStatusClass;
 
   ngOnInit(): void {
-    this.load();
+    this.loadDashboardData();
   }
 
-  load(): void {
-    this.loading = true;
+  loadDashboardData(): void {
+    this.loading.set(true);
 
-    forkJoin({
-      v: this.api.getAll('/vehicles', 0, 1).pipe(catchError(() => of(null))),
-      inv: this.api.getAll('/inventory-items', 0, 1).pipe(catchError(() => of(null))),
-      s: this.api.getAll('/sales', 0, 1).pipe(catchError(() => of(null))),
-      c: this.api.getAll('/customers', 0, 1).pipe(catchError(() => of(null))),
-      apt: this.api.getAll('/appointments', 0, 5).pipe(catchError(() => of(null))),
-      br: this.api.getAll('/branches', 0, 6).pipe(catchError(() => of(null))),
-    }).subscribe((res) => {
-      this.stats = this.buildStats(
-        (res.v as any)?.page?.totalElements ?? 0,
-        (res.inv as any)?.page?.totalElements ?? 0,
-        (res.s as any)?.page?.totalElements ?? 0,
-        (res.c as any)?.page?.totalElements ?? 0,
-      );
+    this.api
+      .get<DashboardSummary>('/dashboard/summary')
+      .pipe(
+        catchError(() =>
+          of({
+            totalVehicles: 0,
+            totalInventory: 0,
+            totalSales: 0,
+            totalCustomers: 0,
+          } as DashboardSummary),
+        ),
+      )
+      .subscribe((res) => {
+        this.stats.set(
+          this.buildStats(
+            res.totalVehicles,
+            res.totalInventory,
+            res.totalSales,
+            res.totalCustomers,
+          ),
+        );
+        this.loading.set(false);
+      });
 
-      this.appointments = (res.apt as any)?._embedded?.appointmentResponseDTOList ?? [];
+    this.loadRecentAppointments();
+    this.loadBranches();
+  }
 
-      const brRaw = res.br as any;
-      this.branches =
-        brRaw?._embedded?.branchResponseDTOList ?? (Array.isArray(brRaw) ? brRaw : []);
+  private loadRecentAppointments(): void {
+    this.api
+      .getAll<AppointmentResponse>('/appointments', 0, 5)
+      .pipe(
+        catchError(() =>
+          of({ _embedded: { appointmentResponseDTOList: [] } } as AppointmentResponse),
+        ),
+      )
+      .subscribe((res) => {
+        const list = res._embedded?.appointmentResponseDTOList ?? [];
+        this.appointments.set(list);
+      });
+  }
 
-      this.loading = false;
-      this.cdr.markForCheck();
-    });
+  private loadBranches(): void {
+    this.api
+      .getAll('/branches', 0, 6)
+      .pipe(catchError(() => of(null)))
+      .subscribe((res) => {
+        const data = (res as any)?._embedded?.branchResponseDTOList ?? [];
+        this.branches.set(Array.isArray(data) ? data : []);
+      });
   }
 
   private buildStats(v: number, inv: number, s: number, c: number) {

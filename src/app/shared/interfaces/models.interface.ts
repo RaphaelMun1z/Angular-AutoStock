@@ -1,24 +1,27 @@
-// ─── Pagination ──────────────────────────────────────────────────────────────
-export interface PageMeta {
+// ─── Pagination & HATEOAS ───────────────────────────────────────────────────
+
+export interface PageMetadata {
   size: number;
   totalElements: number;
   totalPages: number;
   number: number;
 }
 
-export interface PagedResponse<T> {
-  _embedded?: Record<string, T[]>;
-  _links?: Record<string, unknown>;
-  page?: PageMeta;
+export interface HATEOASResponse<K extends string, T> {
+  _embedded?: { [key in K]: T[] };
+  _links?: Record<string, { href: string }>;
+  page?: PageMetadata;
 }
 
-// ─── Auth ────────────────────────────────────────────────────────────────────
-export interface LoginRequest  { email: string; password: string; }
+/** Interface genérica usada pelo ApiService.getAll */
+export interface PagedResponse<T> extends HATEOASResponse<string, T> {}
+
+// ─── Auth & Admin ────────────────────────────────────────────────────────────
+
+export interface LoginRequest { email: string; password: string; }
 export interface LoginResponse { token: TokenDTO; }
 export interface TokenDTO {
   username: string;
-  created: string;
-  expiration: string;
   accessToken: string;
 }
 export interface CurrentUser {
@@ -27,19 +30,38 @@ export interface CurrentUser {
   role?: string;
 }
 
+export interface Admin {
+  id?: string;
+  name: string;
+  email: string;
+  phone?: string;
+}
+
+export interface AdminRegisterRequest extends Omit<Admin, 'id'> {
+  password?: string;
+}
+
+// ─── Dashboard ─────────────────────────────────────────────────────────────────
+
+export interface DashboardSummary {
+  totalVehicles:  number;
+  totalInventory: number;
+  totalSales:     number;
+  totalCustomers: number;
+}
+
 // ─── Vehicle ─────────────────────────────────────────────────────────────────
-export type VehicleType       = 'CAR'|'MOTORCYCLE'|'VAN'|'BUS'|'TRUCK'|'BOAT'|'OTHER_VEHICLE_TYPE';
-export type VehicleCategory   = 'SUV'|'SEDAN'|'HATCHBACK'|'SPORTS'|'UTILITARIAN'|'COUPE'|'CONVERTIBLE'|'WAGON'|'PICKUP'|'VAN'|'MOTORHOME'|'ELECTRIC'|'HYBRID'|'OTHERS';
-export type FuelType          = 'GASOLINE'|'DIESEL'|'ELECTRIC'|'HYBRID'|'ETHANOL'|'LPG'|'CNG'|'PROPANE'|'OTHERS';
-export type VehicleStatus     = 'NEW'|'USED'|'SEMINOVO'|'OTHERS';
+
+export type VehicleType = 'CAR'|'MOTORCYCLE'|'VAN'|'BUS'|'TRUCK'|'BOAT'|'OTHER_VEHICLE_TYPE';
+export type VehicleCategory = 'SUV'|'SEDAN'|'HATCHBACK'|'SPORTS'|'UTILITARIAN'|'COUPE'|'CONVERTIBLE'|'WAGON'|'PICKUP'|'VAN'|'MOTORHOME'|'ELECTRIC'|'HYBRID'|'OTHERS';
+export type FuelType = 'GASOLINE'|'DIESEL'|'ELECTRIC'|'HYBRID'|'ETHANOL'|'LPG'|'CNG'|'PROPANE'|'OTHERS';
+export type VehicleStatus = 'NEW'|'USED'|'SEMINOVO'|'OTHERS';
 export type VehicleAvailability = 'AVAILABLE'|'SOLD'|'PENDING'|'RESERVED'|'IN_NEGOTIATION'|'OTHERS';
 
 export interface VehicleImageFile {
   id?: string;
   name: string;
   downloadUri: string;
-  type: string;
-  size: number;
 }
 
 export interface VehicleSpecificDetail {
@@ -67,12 +89,12 @@ export interface Vehicle {
   status?: VehicleStatus;
   availability?: VehicleAvailability;
   description: string;
-  lastUpdate?: string;
   specificDetails?: VehicleSpecificDetail[];
   images?: VehicleImageFile[];
 }
 
 // ─── Inventory ───────────────────────────────────────────────────────────────
+
 export interface InventoryItem {
   id?: string;
   stockEntryDate?: string;
@@ -86,6 +108,7 @@ export interface InventoryItem {
 }
 
 // ─── Customer ────────────────────────────────────────────────────────────────
+
 export type ClientType = 'INDIVIDUAL'|'CORPORATE'|'OTHERS';
 
 export interface Customer {
@@ -95,7 +118,6 @@ export interface Customer {
   email: string;
   phone: string;
   birthDate: string;
-  registrationDate?: string;
   clientType: ClientType;
   validCnh: boolean;
 }
@@ -109,47 +131,40 @@ export interface CustomerAddress {
   state: string;
   country: string;
   cep?: string;
-  complement?: string;
 }
 
 // ─── Seller ──────────────────────────────────────────────────────────────────
-export interface SellerRegisterRequest {
-  name: string;
-  email: string;
-  password: string;
-  phone?: string;
-  hireDate: string;
-  salary: number;
-  commissionRate: number;
-  status?: string;
-}
 
 export interface Seller {
   id?: string;
   name: string;
   email: string;
   phone?: string;
+  hireDate?: string;
+  salary?: number;
+  commissionRate?: number;
 }
 
-// ─── Sale ────────────────────────────────────────────────────────────────────
+export interface SellerRegisterRequest extends Omit<Seller, 'id'> {
+  password?: string;
+}
+
+// ─── Sale & Contract ─────────────────────────────────────────────────────────
+
 export interface Sale {
   id?: string;
   saleDate: string;
   grossAmount: number;
   netAmount?: number;
-  appliedDiscount?: number;
   paymentMethod: string;
-  installmentsNumber?: number;
   receipt: string;
   seller: Partial<Seller>;
   customer: Partial<Customer>;
   inventoryItem: Partial<InventoryItem>;
-  invoice?: string;
 }
 
-// ─── Contract ────────────────────────────────────────────────────────────────
-export type PaymentTerms     = 'CASH'|'BANK_TRANSFER'|'CREDIT_CARD'|'DEBIT_CARD'|'PIX'|'CHECK'|'INSTALLMENTS_WITHOUT_INTEREST'|'INSTALLMENTS_WITH_INTEREST'|'FINANCED_BY_BANK'|'FINANCED_BY_DEALERSHIP'|'TRADE_IN'|'PARTIAL_CASH_PARTIAL_FINANCING'|'OTHER';
-export type ContractStatus   = 'SIGNED'|'CANCELLED'|'EXPIRED'|'PENDING';
+export type PaymentTerms = 'CASH'|'BANK_TRANSFER'|'CREDIT_CARD'|'DEBIT_CARD'|'PIX'|'CHECK'|'OTHER';
+export type ContractStatus = 'SIGNED'|'CANCELLED'|'EXPIRED'|'PENDING';
 
 export interface Contract {
   id?: string;
@@ -160,12 +175,12 @@ export interface Contract {
   totalAmount: number;
   paymentTerms: PaymentTerms;
   contractStatus?: ContractStatus;
-  notes?: string;
   attachments: string;
   sale: Partial<Sale>;
 }
 
 // ─── Branch ──────────────────────────────────────────────────────────────────
+
 export interface BranchAddress {
   id?: string;
   street: string;
@@ -193,7 +208,8 @@ export interface Branch {
 }
 
 // ─── Appointment ─────────────────────────────────────────────────────────────
-export type AppointmentType   = 'TEST_DRIVE'|'NEGOTIATION_VISIT';
+
+export type AppointmentType = 'TEST_DRIVE'|'NEGOTIATION_VISIT';
 export type AppointmentStatus = 'PENDING'|'COMPLETED'|'CANCELLED';
 
 export interface Appointment {
@@ -205,33 +221,17 @@ export interface Appointment {
   seller: Partial<Seller>;
 }
 
-// ─── Admin ───────────────────────────────────────────────────────────────────
-export interface AdminRegisterRequest {
-  name: string;
-  email: string;
-  password: string;
-  phone?: string;
-}
-
-export interface Admin {
-  id?: string;
-  name: string;
-  email: string;
-  phone?: string;
-}
-
-// ─── Upload ──────────────────────────────────────────────────────────────────
-export interface UploadFileResponse {
-  fileName: string;
-  fileDownloadUri: string;
-  fileType: string;
-  size: number;
-}
-
 // ─── Nav ─────────────────────────────────────────────────────────────────────
+
 export interface NavItem {
   path: string;
   label: string;
   icon: string;
   section: string;
+}
+
+export interface AppointmentResponse {
+  _embedded?: {
+    appointmentResponseDTOList: any[];
+  };
 }

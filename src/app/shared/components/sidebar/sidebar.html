@@ -1,6 +1,3 @@
-<!-- Page transition overlay -->
-<app-page-transition />
-
 <!-- Toast notifications -->
 <app-toast />
 
@@ -163,7 +160,6 @@
       </div>
     </div>
     <div class="flex items-center gap-2">
-      <!-- Online indicator -->
       <div
         class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs"
         style="
@@ -179,8 +175,18 @@
     </div>
   </header>
 
-  <!-- Page content -->
-  <main id="main-content" tabindex="-1">
+  <!-- Page content com overlay de transição localizado -->
+  <main id="main-content" tabindex="-1" class="relative min-h-[calc(100vh-56px)]">
+
+    <!-- Overlay de transição — cobre apenas o conteúdo, não a tela inteira -->
+    @if (isTransitioning()) {
+      <div
+        class="content-transition-overlay"
+        [class.leaving]="isLeaving()"
+        aria-hidden="true"
+      ></div>
+    }
+
     <router-outlet />
   </main>
 </div>

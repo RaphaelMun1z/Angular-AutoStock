@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ToastService } from '../../core/services/toast.service';
 import { AdminService } from '../../services/business.service';
@@ -12,42 +12,49 @@ import { Modal } from '../../shared/components/modal/modal';
   imports: [CommonModule, ReactiveFormsModule, Modal],
   templateUrl: './admins.html',
   styleUrl: './admins.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Admins implements OnInit {
-  private svc = inject(AdminService);
+  private svc   = inject(AdminService);
   private toast = inject(ToastService);
-  private fb = inject(FormBuilder);
+  private fb    = inject(FormBuilder);
+  private cdr   = inject(ChangeDetectorRef);
 
-  loading = true;
-  saving = false;
+  loading   = true;
+  saving    = false;
   modalOpen = false;
-  items: any[] = [];
+  items:    any[] = [];
 
   form = this.fb.group({
-    name: ['', Validators.required],
-    email: ['', [Validators.required, Validators.email]],
+    name:     ['', Validators.required],
+    email:    ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
-    phone: [''],
+    phone:    [''],
   });
 
-  ngOnInit(): void {
-    this.load();
-  }
+  ngOnInit(): void { this.load(); }
 
   load(): void {
     this.loading = true;
+    this.cdr.markForCheck();
+
     this.svc.getAll().subscribe({
       next: (r) => {
-        this.items = Array.isArray(r) ? r : [];
+        this.items   = Array.isArray(r) ? r : (r as any)?._embedded?.admResponseDTOList ?? [];
         this.loading = false;
+        this.cdr.markForCheck();
       },
-      error: () => (this.loading = false),
+      error: () => {
+        this.loading = false;
+        this.cdr.markForCheck();
+      },
     });
   }
 
   openNew(): void {
     this.form.reset();
     this.modalOpen = true;
+    this.cdr.markForCheck();
   }
 
   onPhone(e: Event): void {
@@ -57,21 +64,21 @@ export class Admins implements OnInit {
   }
 
   save(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
+    if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.saving = true;
+    this.cdr.markForCheck();
+
     this.svc.create(this.form.value as any).subscribe({
       next: () => {
         this.toast.success('Administrador cadastrado!');
         this.modalOpen = false;
-        this.saving = false;
+        this.saving    = false;
         this.load();
       },
       error: (e) => {
         this.toast.error(e?.message ?? 'Erro');
         this.saving = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -88,10 +95,7 @@ export class Admins implements OnInit {
     });
     if (!r.isConfirmed) return;
     this.svc.delete(a.id).subscribe({
-      next: () => {
-        this.toast.success('Administrador excluído!');
-        this.load();
-      },
+      next: () => { this.toast.success('Administrador excluído!'); this.load(); },
       error: (e) => this.toast.error(e?.message ?? 'Erro'),
     });
   }

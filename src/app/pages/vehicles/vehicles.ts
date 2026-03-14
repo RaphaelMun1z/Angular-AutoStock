@@ -1,4 +1,10 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  inject,
+  ChangeDetectorRef,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormsModule } from '@angular/forms';
 import { VehicleService } from '../../services/business.service';
@@ -22,11 +28,13 @@ import { Pagination } from '../../shared/components/pagination/pagination';
   imports: [CommonModule, FormsModule, ReactiveFormsModule, Modal, Pagination],
   templateUrl: './vehicles.html',
   styleUrl: './vehicles.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Vehicles implements OnInit {
   private svc = inject(VehicleService);
   private toast = inject(ToastService);
   private fb = inject(FormBuilder);
+  private cdr = inject(ChangeDetectorRef);
 
   loading = true;
   saving = false;
@@ -76,21 +84,26 @@ export class Vehicles implements OnInit {
   load(page = 0): void {
     this.loading = true;
     this.page = page;
+    this.cdr.markForCheck();
+
     this.svc.getAll(page).subscribe({
       next: (r) => {
         this.items = (r as any)?._embedded?.vehicleResponseDTOList ?? [];
         this.totalElements = (r as any)?.page?.totalElements ?? 0;
         this.applyFilter();
         this.loading = false;
+        this.cdr.markForCheck();
       },
       error: () => {
         this.loading = false;
+        this.cdr.markForCheck();
       },
     });
   }
 
   onSearch(): void {
     this.applyFilter();
+    this.cdr.markForCheck();
   }
 
   applyFilter(): void {
@@ -123,12 +136,14 @@ export class Vehicles implements OnInit {
       salePrice: 0,
     });
     this.modalOpen = true;
+    this.cdr.markForCheck();
   }
 
   openEdit(v: Vehicle): void {
     this.editId = v.id ?? '';
     this.form.patchValue({ ...v });
     this.modalOpen = true;
+    this.cdr.markForCheck();
   }
 
   save(): void {
@@ -137,8 +152,11 @@ export class Vehicles implements OnInit {
       return;
     }
     this.saving = true;
+    this.cdr.markForCheck();
+
     const body = this.form.value as Vehicle;
     const req = this.editId ? this.svc.update(this.editId, body) : this.svc.create(body);
+
     req.subscribe({
       next: () => {
         this.toast.success(this.editId ? 'Veículo atualizado!' : 'Veículo cadastrado!');
@@ -149,6 +167,7 @@ export class Vehicles implements OnInit {
       error: (e) => {
         this.toast.error(e?.message ?? 'Erro ao salvar');
         this.saving = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -163,6 +182,7 @@ export class Vehicles implements OnInit {
       confirmButtonColor: '#dc2626',
     });
     if (!r.isConfirmed) return;
+
     this.svc.delete(v.id!).subscribe({
       next: () => {
         this.toast.success('Veículo excluído!');
