@@ -3,6 +3,7 @@ import { Component, inject, OnInit, ChangeDetectorRef, ChangeDetectionStrategy }
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ToastService } from '../../core/services/toast.service';
 import { ContractService, SaleService } from '../../services/business.service';
+import { CacheService } from '../../services/cache.service';
 import {
   formatCurrency,
   formatDate,
@@ -24,14 +25,15 @@ export class Contracts implements OnInit {
   private svc     = inject(ContractService);
   private saleSvc = inject(SaleService);
   private toast   = inject(ToastService);
+  private cache   = inject(CacheService);
   private fb      = inject(FormBuilder);
   private cdr     = inject(ChangeDetectorRef);
 
-  loading = true;
-  modalOpen = false;
-  items: any[] = [];
-  sales: any[] = [];
-  page = 0;
+  loading       = false;
+  modalOpen     = false;
+  items:  any[] = [];
+  sales:  any[] = [];
+  page          = 0;
   totalElements = 0;
 
   fmtCurrency = formatCurrency;
@@ -56,15 +58,30 @@ export class Contracts implements OnInit {
     this.load();
   }
 
-  load(page = 0): void {
-    this.loading = true;
+  private cacheKey(page: number): string {
+    return `contracts_page_${page}`;
+  }
+
+  load(page = 0, forceRefresh = false): void {
     this.page = page;
+    const key = this.cacheKey(page);
+
+    if (!forceRefresh && this.cache.has(key)) {
+      const cached = this.cache.get<{ items: any[]; total: number }>(key)!;
+      this.items         = cached.items;
+      this.totalElements = cached.total;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.loading = true;
     this.cdr.markForCheck();
 
     this.svc.getAll(page).subscribe({
       next: (r) => {
         this.items         = (r as any)?._embedded?.contractResponseDTOList ?? [];
         this.totalElements = (r as any)?.page?.totalElements ?? 0;
+        this.cache.set(key, { items: this.items, total: this.totalElements });
         this.loading = false;
         this.cdr.markForCheck();
       },
@@ -75,11 +92,23 @@ export class Contracts implements OnInit {
     });
   }
 
+  refresh(): void {
+    this.cache.invalidate(this.cacheKey(this.page));
+    this.load(this.page, true);
+  }
+
   openNew(): void {
-    this.saleSvc.getAll(0, 200).subscribe((r) => {
-      this.sales = (r as any)?._embedded?.saleResponseDTOList ?? [];
+    const salesKey = 'sales_all';
+    if (this.cache.has(salesKey)) {
+      this.sales = this.cache.get<any[]>(salesKey)!;
       this.cdr.markForCheck();
-    });
+    } else {
+      this.saleSvc.getAll(0, 200).subscribe((r) => {
+        this.sales = (r as any)?._embedded?.saleResponseDTOList ?? [];
+        this.cache.set(salesKey, this.sales);
+        this.cdr.markForCheck();
+      });
+    }
 
     this.form.reset({ paymentTerms: 'CASH', contractStatus: 'PENDING', totalAmount: 0 });
     this.modalOpen = true;
@@ -104,7 +133,8 @@ export class Contracts implements OnInit {
       next: () => {
         this.toast.success('Contrato criado!');
         this.modalOpen = false;
-        this.load(this.page);
+        this.invalidateAllPages();
+        this.load(this.page, true);
       },
       error: (e) => {
         this.toast.error(e?.message ?? 'Erro');
@@ -121,8 +151,18 @@ export class Contracts implements OnInit {
     });
     if (!r.isConfirmed) return;
     this.svc.delete(c.id).subscribe({
-      next: () => { this.toast.success('Contrato excluído!'); this.load(this.page); },
+      next: () => {
+        this.toast.success('Contrato excluído!');
+        this.invalidateAllPages();
+        this.load(this.page, true);
+      },
       error: (e) => this.toast.error(e?.message ?? 'Erro'),
     });
+  }
+
+  private invalidateAllPages(): void {
+    for (let i = 0; i <= Math.ceil(this.totalElements / 12); i++) {
+      this.cache.invalidate(this.cacheKey(i));
+    }
   }
 }

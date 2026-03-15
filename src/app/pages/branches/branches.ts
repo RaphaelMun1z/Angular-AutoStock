@@ -3,6 +3,7 @@ import { Component, inject, OnInit, ChangeDetectorRef, ChangeDetectionStrategy }
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ToastService } from '../../core/services/toast.service';
 import { BranchService } from '../../services/business.service';
+import { CacheService } from '../../services/cache.service';
 import Swal from 'sweetalert2';
 import { Modal } from '../../shared/components/modal/modal';
 
@@ -16,13 +17,16 @@ import { Modal } from '../../shared/components/modal/modal';
 export class Branches implements OnInit {
   private svc   = inject(BranchService);
   private toast = inject(ToastService);
+  private cache = inject(CacheService);
   private fb    = inject(FormBuilder);
   private cdr   = inject(ChangeDetectorRef);
 
-  loading   = true;
+  loading   = false;
   modalOpen = false;
   items:    any[] = [];
   editId    = '';
+
+  private readonly CACHE_KEY = 'branches';
 
   form = this.fb.group({
     name:         ['', Validators.required],
@@ -44,14 +48,21 @@ export class Branches implements OnInit {
 
   ngOnInit(): void { this.load(); }
 
-  load(): void {
+  load(forceRefresh = false): void {
+    if (!forceRefresh && this.cache.has(this.CACHE_KEY)) {
+      this.items = this.cache.get<any[]>(this.CACHE_KEY)!;
+      this.cdr.markForCheck();
+      return;
+    }
+
     this.loading = true;
     this.cdr.markForCheck();
 
     this.svc.getAll().subscribe({
       next: (r) => {
-        const raw   = r as any;
-        this.items  = raw?._embedded?.branchResponseDTOList ?? (Array.isArray(raw) ? raw : []);
+        const raw  = r as any;
+        this.items = raw?._embedded?.branchResponseDTOList ?? (Array.isArray(raw) ? raw : []);
+        this.cache.set(this.CACHE_KEY, this.items);
         this.loading = false;
         this.cdr.markForCheck();
       },
@@ -62,6 +73,11 @@ export class Branches implements OnInit {
     });
   }
 
+  refresh(): void {
+    this.cache.invalidate(this.CACHE_KEY);
+    this.load(true);
+  }
+
   openNew(): void {
     this.editId = '';
     this.form.reset({ country: 'BRASIL', status: 'Ativo', number: 0 });
@@ -70,6 +86,19 @@ export class Branches implements OnInit {
   }
 
   openEdit(id: string): void {
+    // Tenta carregar do cache primeiro
+    const cached = this.cache.get<any[]>(this.CACHE_KEY);
+    const branch = cached?.find(b => b.id === id);
+
+    if (branch) {
+      this.editId = id;
+      this.form.patchValue({ ...branch, ...branch.address } as any);
+      this.modalOpen = true;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    // Fallback: busca da API
     this.svc.getById(id).subscribe((b) => {
       this.editId = id;
       this.form.patchValue({ ...b, ...b.address } as any);
@@ -100,7 +129,8 @@ export class Branches implements OnInit {
         this.toast.success(this.editId ? 'Filial atualizada!' : 'Filial cadastrada!');
         this.modalOpen = false;
         this.editId    = '';
-        this.load();
+        this.cache.invalidate(this.CACHE_KEY);
+        this.load(true);
       },
       error: (e) => {
         this.toast.error(e?.message ?? 'Erro');
@@ -117,7 +147,11 @@ export class Branches implements OnInit {
     });
     if (!r.isConfirmed) return;
     this.svc.delete(b.id).subscribe({
-      next: () => { this.toast.success('Filial excluída!'); this.load(); },
+      next: () => {
+        this.toast.success('Filial excluída!');
+        this.cache.invalidate(this.CACHE_KEY);
+        this.load(true);
+      },
       error: (e) => this.toast.error(e?.message ?? 'Erro'),
     });
   }

@@ -4,21 +4,47 @@
       <h2 class="page-title">Veículos</h2>
       <p class="page-subtitle">Cadastro e gerenciamento do catálogo</p>
     </div>
-    <button class="btn-brand" (click)="openNew()">
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.5"
-        aria-hidden="true"
+    <div class="flex items-center gap-2">
+      <!-- Botão de refresh — invalida cache e recarrega da API -->
+      <button
+        class="btn-secondary"
+        (click)="refresh()"
+        [disabled]="loading"
+        title="Atualizar dados"
+        aria-label="Atualizar lista de veículos"
       >
-        <line x1="12" y1="5" x2="12" y2="19" />
-        <line x1="5" y1="12" x2="19" y2="12" />
-      </svg>
-      Novo Veículo
-    </button>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          [class.animate-spin]="loading"
+          aria-hidden="true"
+        >
+          <path d="M1 4v6h6M23 20v-6h-6" />
+          <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" />
+        </svg>
+        Atualizar
+      </button>
+
+      <button class="btn-brand" (click)="openNew()">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          aria-hidden="true"
+        >
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        Novo Veículo
+      </button>
+    </div>
   </div>
 
   <div class="card overflow-hidden">
@@ -156,9 +182,9 @@
       class="p-4 flex flex-wrap items-center justify-between gap-3"
       style="border-top: 1px solid var(--surface-border)"
     >
-      <span class="text-xs" style="color: var(--text-muted)"
-        >{{ totalElements }} veículo(s) encontrado(s)</span
-      >
+      <span class="text-xs" style="color: var(--text-muted)">
+        {{ totalElements }} veículo(s) encontrado(s)
+      </span>
       <app-pagination
         [totalElements]="totalElements"
         [pageSize]="12"
@@ -175,7 +201,11 @@
     (closeModal)="modalOpen = false"
   >
     <ng-container slot="body">
-      <form [formGroup]="form" class="grid grid-cols-2 gap-4">
+      <form 
+        [formGroup]="form" 
+        class="grid grid-cols-2 gap-4"
+        style="max-height: 50vh; overflow-y: auto; overflow-x: hidden; padding-right: 0.5rem; align-content: start;"
+      >
         <div>
           <label class="form-label" for="v-brand">Marca *</label>
           <input id="v-brand" class="form-input" formControlName="brand" placeholder="Toyota" />
@@ -219,23 +249,11 @@
         </div>
         <div>
           <label class="form-label" for="v-km">Quilometragem *</label>
-          <input
-            id="v-km"
-            type="number"
-            class="form-input"
-            formControlName="mileage"
-            placeholder="0"
-          />
+          <input id="v-km" type="number" class="form-input" formControlName="mileage" placeholder="0" />
         </div>
         <div>
           <label class="form-label" for="v-weight">Peso (kg) *</label>
-          <input
-            id="v-weight"
-            type="number"
-            class="form-input"
-            formControlName="weight"
-            placeholder="1200"
-          />
+          <input id="v-weight" type="number" class="form-input" formControlName="weight" placeholder="1200" />
         </div>
         <div>
           <label class="form-label" for="v-fuel">Combustível *</label>
@@ -249,54 +267,23 @@
         </div>
         <div>
           <label class="form-label" for="v-cyl">Cilindros *</label>
-          <input
-            id="v-cyl"
-            type="number"
-            class="form-input"
-            formControlName="numberOfCylinders"
-            placeholder="4"
-          />
+          <input id="v-cyl" type="number" class="form-input" formControlName="numberOfCylinders" placeholder="4" />
         </div>
         <div>
           <label class="form-label" for="v-power">Potência (cv) *</label>
-          <input
-            id="v-power"
-            type="number"
-            class="form-input"
-            formControlName="enginePower"
-            placeholder="150"
-          />
+          <input id="v-power" type="number" class="form-input" formControlName="enginePower" placeholder="150" />
         </div>
         <div>
           <label class="form-label" for="v-tank">Tanque (L) *</label>
-          <input
-            id="v-tank"
-            type="number"
-            class="form-input"
-            formControlName="fuelTankCapacity"
-            placeholder="50"
-          />
+          <input id="v-tank" type="number" class="form-input" formControlName="fuelTankCapacity" placeholder="50" />
         </div>
         <div>
           <label class="form-label" for="v-pass">Passageiros *</label>
-          <input
-            id="v-pass"
-            type="number"
-            class="form-input"
-            formControlName="passengerCapacity"
-            placeholder="5"
-          />
+          <input id="v-pass" type="number" class="form-input" formControlName="passengerCapacity" placeholder="5" />
         </div>
         <div>
           <label class="form-label" for="v-price">Preço (R$) *</label>
-          <input
-            id="v-price"
-            type="number"
-            class="form-input"
-            formControlName="salePrice"
-            placeholder="0.00"
-            step="0.01"
-          />
+          <input id="v-price" type="number" class="form-input" formControlName="salePrice" placeholder="0.00" step="0.01" />
         </div>
         <div>
           <label class="form-label" for="v-status">Status</label>
@@ -318,22 +305,11 @@
         </div>
         <div class="col-span-2">
           <label class="form-label" for="v-info">Infotainment *</label>
-          <input
-            id="v-info"
-            class="form-input"
-            formControlName="infotainmentSystem"
-            placeholder="Android Auto, CarPlay..."
-          />
+          <input id="v-info" class="form-input" formControlName="infotainmentSystem" placeholder="Android Auto, CarPlay..." />
         </div>
         <div class="col-span-2">
           <label class="form-label" for="v-desc">Descrição *</label>
-          <textarea
-            id="v-desc"
-            class="form-input"
-            formControlName="description"
-            rows="2"
-            placeholder="Descrição..."
-          ></textarea>
+          <textarea id="v-desc" class="form-input" formControlName="description" rows="2" placeholder="Descrição..."></textarea>
         </div>
       </form>
     </ng-container>
@@ -342,15 +318,7 @@
       <button class="btn-brand" (click)="save()" [disabled]="saving">
         @if (saving) {
           <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <circle
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="3"
-              stroke-dasharray="30 60"
-              stroke-linecap="round"
-            />
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="30 60" stroke-linecap="round" />
           </svg>
         }
         Salvar

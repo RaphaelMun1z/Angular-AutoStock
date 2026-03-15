@@ -8,6 +8,7 @@ import {
   InventoryService,
 } from '../../services/business.service';
 import { ToastService } from '../../core/services/toast.service';
+import { CacheService } from '../../services/cache.service';
 import { formatCurrency, formatDate } from '../../shared/helpers/formatters.helper';
 import { forkJoin, catchError, of } from 'rxjs';
 import Swal from 'sweetalert2';
@@ -27,19 +28,20 @@ export class Sales implements OnInit {
   private selSvc  = inject(SellerService);
   private invSvc  = inject(InventoryService);
   private toast   = inject(ToastService);
+  private cache   = inject(CacheService);
   private fb      = inject(FormBuilder);
   private cdr     = inject(ChangeDetectorRef);
 
-  loading = true;
-  modalOpen = false;
+  loading          = false;
+  modalOpen        = false;
   showInstallments = false;
-  items: any[] = [];
+  items:     any[] = [];
   customers: any[] = [];
-  sellers: any[] = [];
+  sellers:   any[] = [];
   inventory: any[] = [];
-  page = 0;
+  page          = 0;
   totalElements = 0;
-  netDisplay = 'R$ 0,00';
+  netDisplay    = 'R$ 0,00';
 
   fmtCurrency = formatCurrency;
   fmtDate     = formatDate;
@@ -60,15 +62,30 @@ export class Sales implements OnInit {
     this.load();
   }
 
-  load(page = 0): void {
-    this.loading = true;
+  private cacheKey(page: number): string {
+    return `sales_page_${page}`;
+  }
+
+  load(page = 0, forceRefresh = false): void {
     this.page = page;
+    const key = this.cacheKey(page);
+
+    if (!forceRefresh && this.cache.has(key)) {
+      const cached = this.cache.get<{ items: any[]; total: number }>(key)!;
+      this.items         = cached.items;
+      this.totalElements = cached.total;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.loading = true;
     this.cdr.markForCheck();
 
     this.svc.getAll(page).subscribe({
       next: (r) => {
         this.items         = (r as any)?._embedded?.saleResponseDTOList ?? [];
         this.totalElements = (r as any)?.page?.totalElements ?? 0;
+        this.cache.set(key, { items: this.items, total: this.totalElements });
         this.loading = false;
         this.cdr.markForCheck();
       },
@@ -79,20 +96,37 @@ export class Sales implements OnInit {
     });
   }
 
+  refresh(): void {
+    this.cache.invalidate(this.cacheKey(this.page));
+    this.load(this.page, true);
+  }
+
   openNew(): void {
     forkJoin({
-      c: this.custSvc.getAll(0, 200).pipe(catchError(() => of(null))),
-      s: this.selSvc.getAll(0, 200).pipe(catchError(() => of(null))),
-      i: this.invSvc.getAll(0, 200).pipe(catchError(() => of(null))),
+      c: this.cache.has('customers_all')
+        ? of({ _embedded: { customerResponseDTOList: this.cache.get('customers_all') } })
+        : this.custSvc.getAll(0, 200).pipe(catchError(() => of(null))),
+      s: this.cache.has('sellers_all')
+        ? of({ _embedded: { sellerResponseDTOList: this.cache.get('sellers_all') } })
+        : this.selSvc.getAll(0, 200).pipe(catchError(() => of(null))),
+      i: this.cache.has('inventory_all')
+        ? of({ _embedded: { inventoryItemResponseDTOList: this.cache.get('inventory_all') } })
+        : this.invSvc.getAll(0, 200).pipe(catchError(() => of(null))),
     }).subscribe((res) => {
       this.customers = (res.c as any)?._embedded?.customerResponseDTOList ?? [];
       this.sellers   = (res.s as any)?._embedded?.sellerResponseDTOList   ?? [];
       this.inventory = (res.i as any)?._embedded?.inventoryItemResponseDTOList ?? [];
+
+      // Salva no cache para reutilizar em próximas aberturas
+      if (!this.cache.has('customers_all')) this.cache.set('customers_all', this.customers);
+      if (!this.cache.has('sellers_all'))   this.cache.set('sellers_all',   this.sellers);
+      if (!this.cache.has('inventory_all')) this.cache.set('inventory_all', this.inventory);
+
       this.cdr.markForCheck();
     });
 
     this.form.reset({ paymentMethod: 'CASH', grossAmount: 0, appliedDiscount: 0 });
-    this.netDisplay      = 'R$ 0,00';
+    this.netDisplay       = 'R$ 0,00';
     this.showInstallments = false;
     this.modalOpen        = true;
     this.cdr.markForCheck();
@@ -140,7 +174,8 @@ export class Sales implements OnInit {
       next: () => {
         this.toast.success('Venda registrada!');
         this.modalOpen = false;
-        this.load(this.page);
+        this.invalidateAllPages();
+        this.load(this.page, true);
       },
       error: (e) => {
         this.toast.error(e?.message ?? 'Erro');
@@ -157,8 +192,18 @@ export class Sales implements OnInit {
     });
     if (!r.isConfirmed) return;
     this.svc.delete(s.id).subscribe({
-      next: () => { this.toast.success('Venda excluída!'); this.load(this.page); },
+      next: () => {
+        this.toast.success('Venda excluída!');
+        this.invalidateAllPages();
+        this.load(this.page, true);
+      },
       error: (e) => this.toast.error(e?.message ?? 'Erro'),
     });
+  }
+
+  private invalidateAllPages(): void {
+    for (let i = 0; i <= Math.ceil(this.totalElements / 12); i++) {
+      this.cache.invalidate(this.cacheKey(i));
+    }
   }
 }

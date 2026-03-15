@@ -415,7 +415,6 @@ h6 {
 
   .main-content {
     @apply min-h-screen;
-    margin-left: 260px;
     transition:
       margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1),
       background-color 0.3s;
@@ -436,6 +435,11 @@ h6 {
   .page-content {
     @apply p-6;
     animation: pageEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    height: 100vh;
+    display: flex;
+	flex-wrap: wrap;
+	flex-direction: column;
+    width: 100%;
   }
 
   .page-header {

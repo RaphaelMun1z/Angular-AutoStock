@@ -5,11 +5,11 @@ export type Theme = 'dark' | 'light';
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   private readonly STORAGE_KEY = 'autostock_theme';
-  theme = signal<Theme>('dark');
+  theme = signal<Theme>('light');
 
   init(): void {
     const saved = localStorage.getItem(this.STORAGE_KEY) as Theme | null;
-    const preferred: Theme = saved ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const preferred: Theme = saved ?? 'light';
     this.apply(preferred);
   }
 

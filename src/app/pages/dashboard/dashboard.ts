@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { catchError, of } from 'rxjs';
 import { ApiService } from '../../services/api.service';
+import { CacheService } from '../../services/cache.service';
 import {
   formatDate,
   aptTypeLabel,
@@ -21,16 +22,24 @@ import { AppointmentResponse, DashboardSummary } from '../../shared/interfaces/m
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Dashboard implements OnInit {
-  private api = inject(ApiService);
+  private api   = inject(ApiService);
+  private cache = inject(CacheService);
 
-  loading = signal(true);
-  stats = signal<any[]>([]);
+  loading      = signal(true);
+  stats        = signal<any[]>([]);
   appointments = signal<any[]>([]);
-  branches = signal<any[]>([]);
+  branches     = signal<any[]>([]);
 
-  fmtDate = formatDate;
-  aptTypeLabel = aptTypeLabel;
-  aptTypeClass = aptTypeClass;
+  // Chaves de cache para isolar os blocos de dados
+  private readonly cacheKeys = {
+    summary: 'dash_summary',
+    appointments: 'dash_appointments',
+    branches: 'dash_branches'
+  };
+
+  fmtDate        = formatDate;
+  aptTypeLabel   = aptTypeLabel;
+  aptTypeClass   = aptTypeClass;
   aptStatusLabel = aptStatusLabel;
   aptStatusClass = aptStatusClass;
 
@@ -38,38 +47,57 @@ export class Dashboard implements OnInit {
     this.loadDashboardData();
   }
 
-  loadDashboardData(): void {
+  refresh(): void {
+    this.cache.invalidate(this.cacheKeys.summary);
+    this.cache.invalidate(this.cacheKeys.appointments);
+    this.cache.invalidate(this.cacheKeys.branches);
+    this.loadDashboardData(true);
+  }
+
+  loadDashboardData(forceRefresh = false): void {
     this.loading.set(true);
 
-    this.api
-      .get<DashboardSummary>('/dashboard/summary')
-      .pipe(
-        catchError(() =>
-          of({
-            totalVehicles: 0,
-            totalInventory: 0,
-            totalSales: 0,
-            totalCustomers: 0,
-          } as DashboardSummary),
-        ),
-      )
-      .subscribe((res) => {
-        this.stats.set(
-          this.buildStats(
+    // 1. Bloco de Resumo (Cards Superiores)
+    if (!forceRefresh && this.cache.has(this.cacheKeys.summary)) {
+      this.stats.set(this.cache.get<any[]>(this.cacheKeys.summary)!);
+      this.loading.set(false);
+    } else {
+      this.api
+        .get<DashboardSummary>('/dashboard/summary')
+        .pipe(
+          catchError(() =>
+            of({
+              totalVehicles: 0,
+              totalInventory: 0,
+              totalSales: 0,
+              totalCustomers: 0,
+            } as DashboardSummary),
+          ),
+        )
+        .subscribe((res) => {
+          const statsData = this.buildStats(
             res.totalVehicles,
             res.totalInventory,
             res.totalSales,
             res.totalCustomers,
-          ),
-        );
-        this.loading.set(false);
-      });
+          );
+          this.stats.set(statsData);
+          this.cache.set(this.cacheKeys.summary, statsData);
+          this.loading.set(false);
+        });
+    }
 
-    this.loadRecentAppointments();
-    this.loadBranches();
+    // Carrega os outros dois blocos passando a flag de atualização
+    this.loadRecentAppointments(forceRefresh);
+    this.loadBranches(forceRefresh);
   }
 
-  private loadRecentAppointments(): void {
+  private loadRecentAppointments(forceRefresh: boolean): void {
+    if (!forceRefresh && this.cache.has(this.cacheKeys.appointments)) {
+      this.appointments.set(this.cache.get<any[]>(this.cacheKeys.appointments)!);
+      return;
+    }
+
     this.api
       .getAll<AppointmentResponse>('/appointments', 0, 5)
       .pipe(
@@ -80,16 +108,24 @@ export class Dashboard implements OnInit {
       .subscribe((res) => {
         const list = res._embedded?.appointmentResponseDTOList ?? [];
         this.appointments.set(list);
+        this.cache.set(this.cacheKeys.appointments, list);
       });
   }
 
-  private loadBranches(): void {
+  private loadBranches(forceRefresh: boolean): void {
+    if (!forceRefresh && this.cache.has(this.cacheKeys.branches)) {
+      this.branches.set(this.cache.get<any[]>(this.cacheKeys.branches)!);
+      return;
+    }
+
     this.api
       .getAll('/branches', 0, 6)
       .pipe(catchError(() => of(null)))
       .subscribe((res) => {
         const data = (res as any)?._embedded?.branchResponseDTOList ?? [];
-        this.branches.set(Array.isArray(data) ? data : []);
+        const list = Array.isArray(data) ? data : [];
+        this.branches.set(list);
+        this.cache.set(this.cacheKeys.branches, list);
       });
   }
 

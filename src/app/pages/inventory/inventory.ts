@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormsModule } from '@angular/forms';
 import { InventoryService, VehicleService } from '../../services/business.service';
 import { ToastService } from '../../core/services/toast.service';
+import { CacheService } from '../../services/cache.service';
 import { formatCurrency, formatDate } from '../../shared/helpers/formatters.helper';
 import Swal from 'sweetalert2';
 import { Modal } from '../../shared/components/modal/modal';
@@ -19,18 +20,19 @@ export class Inventory implements OnInit {
   private svc    = inject(InventoryService);
   private vehSvc = inject(VehicleService);
   private toast  = inject(ToastService);
+  private cache  = inject(CacheService);
   private fb     = inject(FormBuilder);
   private cdr    = inject(ChangeDetectorRef);
 
-  loading = true;
-  modalOpen = false;
-  items: any[] = [];
+  loading       = false;
+  modalOpen     = false;
+  items:    any[] = [];
   filtered: any[] = [];
   vehicles: any[] = [];
-  page = 0;
+  page          = 0;
   totalElements = 0;
-  searchQuery = '';
-  salePreview = '—';
+  searchQuery   = '';
+  salePreview   = '—';
 
   fmtCurrency = formatCurrency;
   fmtDate     = formatDate;
@@ -57,15 +59,31 @@ export class Inventory implements OnInit {
     this.loadVehicles();
   }
 
-  load(page = 0): void {
-    this.loading = true;
+  private cacheKey(page: number): string {
+    return `inventory_page_${page}`;
+  }
+
+  load(page = 0, forceRefresh = false): void {
     this.page = page;
+    const key = this.cacheKey(page);
+
+    if (!forceRefresh && this.cache.has(key)) {
+      const cached = this.cache.get<{ items: any[]; total: number }>(key)!;
+      this.items         = cached.items;
+      this.totalElements = cached.total;
+      this.applyFilter();
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.loading = true;
     this.cdr.markForCheck();
 
     this.svc.getAll(page).subscribe({
       next: (r) => {
         this.items         = (r as any)?._embedded?.inventoryItemResponseDTOList ?? [];
         this.totalElements = (r as any)?.page?.totalElements ?? 0;
+        this.cache.set(key, { items: this.items, total: this.totalElements });
         this.applyFilter();
         this.loading = false;
         this.cdr.markForCheck();
@@ -77,9 +95,21 @@ export class Inventory implements OnInit {
     });
   }
 
+  refresh(): void {
+    this.cache.invalidate(this.cacheKey(this.page));
+    this.load(this.page, true);
+  }
+
   loadVehicles(): void {
+    const key = 'vehicles_all';
+    if (this.cache.has(key)) {
+      this.vehicles = this.cache.get<any[]>(key)!;
+      this.cdr.markForCheck();
+      return;
+    }
     this.vehSvc.getAll(0, 200).subscribe((r) => {
       this.vehicles = (r as any)?._embedded?.vehicleResponseDTOList ?? [];
+      this.cache.set(key, this.vehicles);
       this.cdr.markForCheck();
     });
   }
@@ -113,7 +143,7 @@ export class Inventory implements OnInit {
       acquisitionPrice: 0, profitMargin: 0, stockEntryDate: '', stockExitDate: '',
     });
     this.salePreview = '—';
-    this.modalOpen = true;
+    this.modalOpen   = true;
     this.cdr.markForCheck();
   }
 
@@ -133,7 +163,8 @@ export class Inventory implements OnInit {
       next: () => {
         this.toast.success('Item adicionado!');
         this.modalOpen = false;
-        this.load(this.page);
+        this.invalidateAllPages();
+        this.load(this.page, true);
       },
       error: (e) => {
         this.toast.error(e?.message ?? 'Erro');
@@ -150,8 +181,18 @@ export class Inventory implements OnInit {
     });
     if (!r.isConfirmed) return;
     this.svc.delete(i.id).subscribe({
-      next: () => { this.toast.success('Removido!'); this.load(this.page); },
+      next: () => {
+        this.toast.success('Removido!');
+        this.invalidateAllPages();
+        this.load(this.page, true);
+      },
       error: (e) => this.toast.error(e?.message ?? 'Erro'),
     });
+  }
+
+  private invalidateAllPages(): void {
+    for (let i = 0; i <= Math.ceil(this.totalElements / 12); i++) {
+      this.cache.invalidate(this.cacheKey(i));
+    }
   }
 }

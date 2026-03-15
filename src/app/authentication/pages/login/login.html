@@ -1,268 +1,208 @@
-<div class="min-h-screen flex" style="background: var(--surface)">
-  <!-- Left panel -->
-  <div
-    class="hidden lg:flex flex-col justify-between w-1/2 relative overflow-hidden p-12"
-    style="background: var(--surface-secondary); border-right: 1px solid var(--surface-border)"
-  >
-    <!-- Decorative background -->
-    <div class="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-      <div
-        class="absolute -top-40 -right-40 w-96 h-96 rounded-full opacity-[0.06]"
-        style="background: radial-gradient(circle, var(--brand) 0%, transparent 70%)"
-      ></div>
-      <div
-        class="absolute bottom-20 -left-20 w-80 h-80 rounded-full opacity-[0.04]"
-        style="background: radial-gradient(circle, var(--brand-light) 0%, transparent 70%)"
-      ></div>
-      <!-- Grid pattern -->
-      <svg
-        class="absolute inset-0 w-full h-full opacity-[0.025]"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <defs>
-          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="var(--text-primary)" stroke-width="1" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#grid)" />
-      </svg>
-    </div>
+<div class="login-root">
+
+  <!-- ── LADO ESQUERDO: formulário ─────────────────────────────── -->
+  <div class="login-left">
 
     <!-- Logo -->
-    <div class="relative z-10 animate-fade-in">
-      <div class="flex items-center gap-3 mb-2">
-        <div
-          class="w-12 h-12 rounded-2xl flex items-center justify-center"
-          style="background: linear-gradient(135deg, var(--brand), var(--brand-dark))"
-        >
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path
-              d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3m-4 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-            />
+    <header class="login-header">
+      <div class="login-logo">
+        <div class="login-logo-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white"
+               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3m-4 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
           </svg>
         </div>
-        <span
-          class="font-heading font-black text-2xl tracking-tight"
-          style="color: var(--text-primary)"
-        >
-          Auto<span style="color: var(--brand)">Stock</span>
-        </span>
+        <span class="login-logo-text">Auto<span>Stock</span></span>
       </div>
-      <p class="text-sm" style="color: var(--text-muted)">Sistema ERP para Concessionárias</p>
-    </div>
+      <span class="login-badge">ERP Concessionária</span>
+    </header>
 
-    <!-- Central content -->
-    <div class="relative z-10 animate-slide-in-up">
-      <h2
-        class="font-heading font-black text-4xl leading-tight mb-6"
-        style="color: var(--text-primary)"
-      >
-        Gestão completa<br />
-        <span
-          style="
-            background: linear-gradient(135deg, var(--brand-light), var(--brand));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-          "
-        >
-          em uma plataforma
-        </span>
-      </h2>
-      <div class="space-y-4">
-        @for (feat of features; track feat.label) {
-          <div class="flex items-center gap-3">
-            <div
-              class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-              style="background: rgba(234, 88, 12, 0.12); border: 1px solid rgba(234, 88, 12, 0.2)"
-            >
-              <span style="color: var(--brand)" class="text-sm" aria-hidden="true">{{
-                feat.icon
-              }}</span>
-            </div>
-            <span class="text-sm" style="color: var(--text-secondary)">{{ feat.label }}</span>
+    <!-- Form area -->
+    <div class="login-form-wrap">
+
+      <!-- ── VIEW: login ── -->
+      @if (view === 'login') {
+        <div class="login-view">
+          <div class="login-heading">
+            <p class="login-eyebrow">Acesso Restrito</p>
+            <h1 class="login-title">Bem-vindo de volta<span class="login-dot">.</span></h1>
+            <p class="login-sub">Faça login para acessar o sistema</p>
           </div>
-        }
-      </div>
+
+          <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate class="login-fields">
+
+            <!-- Email -->
+            <div class="field-group" [class.field-error]="emailInvalid">
+              <label for="email" class="field-label">E-mail</label>
+              <div class="field-inner">
+                <input id="email" type="email" formControlName="email"
+                       class="field-input" placeholder="seu@email.com"
+                       autocomplete="username"/>
+                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
+              </div>
+              @if (emailInvalid) {
+                <p class="field-msg" role="alert">E-mail inválido</p>
+              }
+            </div>
+
+            <!-- Senha -->
+            <div class="field-group" [class.field-error]="passInvalid">
+              <label for="password" class="field-label">Senha</label>
+              <div class="field-inner">
+                <input id="password" [type]="showPass() ? 'text' : 'password'"
+                       formControlName="password" class="field-input"
+                       placeholder="••••••••" autocomplete="current-password"/>
+                <button type="button" class="field-icon field-icon-btn"
+                        (click)="showPass.update(v => !v)"
+                        [attr.aria-label]="showPass() ? 'Ocultar senha' : 'Mostrar senha'">
+                  @if (showPass()) {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  } @else {
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  }
+                </button>
+              </div>
+              @if (passInvalid) {
+                <p class="field-msg" role="alert">Mínimo 4 caracteres</p>
+              }
+            </div>
+
+            <!-- Erro geral -->
+            @if (error()) {
+              <div class="login-error" role="alert">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                {{ error() }}
+              </div>
+            }
+
+            <!-- Botões -->
+            <div class="login-actions">
+              <button type="button" class="btn-ghost" (click)="view = 'recovery'">
+                Recuperar acesso
+              </button>
+              <button type="submit" class="btn-primary" [disabled]="loading()">
+                @if (loading()) {
+                  <svg class="spin" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"
+                            stroke-dasharray="30 60" stroke-linecap="round"/>
+                  </svg>
+                  Autenticando...
+                } @else {
+                  Entrar no sistema
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2.5" aria-hidden="true">
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                }
+              </button>
+            </div>
+
+          </form>
+        </div>
+      }
+
+      <!-- ── VIEW: recuperação ── -->
+      @if (view === 'recovery') {
+        <div class="login-view">
+          <div class="login-heading">
+            <p class="login-eyebrow">Segurança</p>
+            <h1 class="login-title">Recuperar acesso<span class="login-dot">.</span></h1>
+            <p class="login-sub">Insira seu e-mail e enviaremos um link para redefinir a senha.</p>
+          </div>
+
+          <div class="login-fields">
+            <!-- Email -->
+            <div class="field-group">
+              <label for="rec-email" class="field-label">E-mail</label>
+              <div class="field-inner">
+                <input id="rec-email" type="email" class="field-input"
+                       placeholder="seu@email.com" autocomplete="username"/>
+                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Info card -->
+            <div class="info-card">
+              <svg class="info-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <div>
+                <p class="info-card-title">Sem acesso ao e-mail?</p>
+                <p class="info-card-body">
+                  Entre em contato com o administrador do sistema ou acesse presencialmente o setor de TI.
+                </p>
+              </div>
+            </div>
+
+            <!-- Botões -->
+            <div class="login-actions">
+              <button type="button" class="btn-ghost" (click)="view = 'login'">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" aria-hidden="true">
+                  <polyline points="15 18 9 12 15 6"/>
+                </svg>
+                Voltar
+              </button>
+              <button type="button" class="btn-primary">
+                Enviar link
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" aria-hidden="true">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
     </div>
 
     <!-- Footer -->
-    <div class="relative z-10 text-xs" style="color: var(--text-muted)">
-      © {{ year }} AutoStock · ERP Automotivo
-    </div>
+    <footer class="login-footer">© {{ year }} AutoStock · ERP Automotivo</footer>
   </div>
 
-  <!-- Right panel — form -->
-  <div class="flex-1 flex items-center justify-center p-6 lg:p-12">
-    <div class="w-full max-w-sm animate-slide-in-right">
-      <!-- Mobile logo -->
-      <div class="lg:hidden flex items-center gap-2 mb-8">
-        <div
-          class="w-9 h-9 rounded-xl flex items-center justify-center"
-          style="background: linear-gradient(135deg, var(--brand), var(--brand-dark))"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            stroke-width="2.5"
-            aria-hidden="true"
-          >
-            <path
-              d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3m-4 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-            />
-          </svg>
-        </div>
-        <span class="font-heading font-black text-xl" style="color: var(--text-primary)">
-          Auto<span style="color: var(--brand)">Stock</span>
-        </span>
-      </div>
+  <!-- ── LADO DIREITO: imagem + máscara curva ──────────────────── -->
+  <div class="login-right" aria-hidden="true">
 
-      <div class="mb-8">
-        <h1 class="font-heading font-bold text-2xl mb-1" style="color: var(--text-primary)">
-          Bem-vindo de volta
-        </h1>
-        <p class="text-sm" style="color: var(--text-muted)">Faça login para acessar o sistema</p>
-      </div>
+    <!-- Máscara curva SVG (idêntica ao modelo) -->
+    <svg class="login-curve" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <path d="M0,0 L40,0 C75,30 15,70 50,100 L0,100 Z" fill="#f8f8f6"/>
+      <path d="M40,0 C75,30 15,70 50,100" fill="none"
+            stroke="rgba(234,88,12,0.2)" stroke-width="0.4" stroke-dasharray="1.5 1.5"/>
+    </svg>
 
-      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
-        <!-- Email -->
-        <div class="mb-4">
-          <label for="email" class="form-label">E-mail</label>
-          <input
-            id="email"
-            type="email"
-            formControlName="email"
-            class="form-input"
-            placeholder="seu@email.com"
-            autocomplete="username"
-            [class.border-red-500]="emailInvalid"
-          />
-          @if (emailInvalid) {
-            <p class="text-xs mt-1" style="color: var(--danger)" role="alert">E-mail inválido</p>
-          }
-        </div>
+    <!-- Imagem de fundo / padrão grid -->
+    <div class="login-bg-img"></div>
 
-        <!-- Password -->
-        <div class="mb-6">
-          <label for="password" class="form-label">Senha</label>
-          <div class="relative">
-            <input
-              id="password"
-              [type]="showPass() ? 'text' : 'password'"
-              formControlName="password"
-              class="form-input pr-10"
-              placeholder="••••••••"
-              autocomplete="current-password"
-              [class.border-red-500]="passInvalid"
-            />
-            <button
-              type="button"
-              class="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
-              style="color: var(--text-muted)"
-              (click)="showPass.update(v => !v)"
-              [attr.aria-label]="showPass() ? 'Ocultar senha' : 'Mostrar senha'"
-            >
-              @if (showPass()) {
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"
-                  />
-                  <line x1="1" y1="1" x2="23" y2="23" />
-                </svg>
-              } @else {
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  aria-hidden="true"
-                >
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              }
-            </button>
-          </div>
-          @if (passInvalid) {
-            <p class="text-xs mt-1" style="color: var(--danger)" role="alert">
-              Mínimo 4 caracteres
-            </p>
-          }
-        </div>
-
-        <!-- Error banner -->
-        @if (error()) {
-          <div
-            class="mb-4 px-4 py-3 rounded-lg text-sm animate-fade-in"
-            style="
-              background: rgba(220, 38, 38, 0.1);
-              color: var(--danger);
-              border: 1px solid rgba(220, 38, 38, 0.2);
-            "
-            role="alert"
-          >
-            {{ error() }}
-          </div>
-        }
-
-        <!-- Submit -->
-        <button type="submit" class="btn-brand w-full justify-center py-3" [disabled]="loading()">
-          @if (loading()) {
-            <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="3"
-                stroke-dasharray="30 60"
-                stroke-linecap="round"
-              />
-            </svg>
-            Autenticando...
-          } @else {
-            Entrar no sistema
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              aria-hidden="true"
-            >
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          }
-        </button>
-
-        <p class="text-center text-xs mt-4" style="color: var(--text-muted)">
-          Modo demo: qualquer e-mail e senha funcionam
-        </p>
-      </form>
-    </div>
+    <!-- Overlays -->
+    <div class="login-overlay-dark"></div>
+    <div class="login-overlay-gradient"></div>
+    <div class="login-overlay-bottom"></div>
   </div>
+
 </div>

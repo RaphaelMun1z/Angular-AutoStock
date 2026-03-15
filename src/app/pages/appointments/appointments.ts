@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { ReactiveFormsModule, FormsModule, FormBuilder, Validators } from '@angular/forms';
-import { forkJoin, catchError, of } from 'rxjs';
+import { catchError, of } from 'rxjs';
 import { ToastService } from '../../core/services/toast.service';
 import { AppointmentService, CustomerService, SellerService } from '../../services/business.service';
+import { CacheService } from '../../services/cache.service';
 import { formatDate, aptTypeClass, aptTypeLabel, aptStatusClass, aptStatusLabel } from '../../shared/helpers/formatters.helper';
 import Swal from 'sweetalert2';
 import { Modal } from '../../shared/components/modal/modal';
@@ -21,10 +22,11 @@ export class Appointments implements OnInit {
   private custSvc = inject(CustomerService);
   private selSvc  = inject(SellerService);
   private toast   = inject(ToastService);
+  private cache   = inject(CacheService);
   private fb      = inject(FormBuilder);
   private cdr     = inject(ChangeDetectorRef);
 
-  loading       = true;
+  loading       = false;
   modalOpen     = false;
   items:     any[] = [];
   customers: any[] = [];
@@ -48,15 +50,30 @@ export class Appointments implements OnInit {
 
   ngOnInit(): void { this.load(); }
 
-  load(page = 0): void {
-    this.loading = true;
+  private cacheKey(page: number): string {
+    return `appointments_page_${page}`;
+  }
+
+  load(page = 0, forceRefresh = false): void {
     this.page = page;
+    const key = this.cacheKey(page);
+
+    if (!forceRefresh && this.cache.has(key)) {
+      const cached = this.cache.get<{ items: any[]; total: number }>(key)!;
+      this.items         = cached.items;
+      this.totalElements = cached.total;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.loading = true;
     this.cdr.markForCheck();
 
     this.svc.getAll(page).subscribe({
       next: (r) => {
         this.items         = (r as any)?._embedded?.appointmentResponseDTOList ?? [];
         this.totalElements = (r as any)?.page?.totalElements ?? 0;
+        this.cache.set(key, { items: this.items, total: this.totalElements });
         this.loading = false;
         this.cdr.markForCheck();
       },
@@ -67,15 +84,35 @@ export class Appointments implements OnInit {
     });
   }
 
+  refresh(): void {
+    this.cache.invalidate(this.cacheKey(this.page));
+    this.load(this.page, true);
+  }
+
   openNew(): void {
-    forkJoin({
-      c: this.custSvc.getAll(0, 200).pipe(catchError(() => of(null))),
-      s: this.selSvc.getAll(0, 200).pipe(catchError(() => of(null))),
-    }).subscribe((res) => {
-      this.customers = (res.c as any)?._embedded?.customerResponseDTOList ?? [];
-      this.sellers   = (res.s as any)?._embedded?.sellerResponseDTOList   ?? [];
-      this.cdr.markForCheck();
-    });
+    // Reutiliza caches compartilhados de clientes e vendedores
+    const custKey = 'customers_all';
+    const selKey  = 'sellers_all';
+
+    if (this.cache.has(custKey)) {
+      this.customers = this.cache.get<any[]>(custKey)!;
+    } else {
+      this.custSvc.getAll(0, 200).pipe(catchError(() => of(null))).subscribe(r => {
+        this.customers = (r as any)?._embedded?.customerResponseDTOList ?? [];
+        this.cache.set(custKey, this.customers);
+        this.cdr.markForCheck();
+      });
+    }
+
+    if (this.cache.has(selKey)) {
+      this.sellers = this.cache.get<any[]>(selKey)!;
+    } else {
+      this.selSvc.getAll(0, 200).pipe(catchError(() => of(null))).subscribe(r => {
+        this.sellers = (r as any)?._embedded?.sellerResponseDTOList ?? [];
+        this.cache.set(selKey, this.sellers);
+        this.cdr.markForCheck();
+      });
+    }
 
     this.form.reset({ appointmentType: 'TEST_DRIVE', appointmentStatus: 'PENDING' });
     this.modalOpen = true;
@@ -84,6 +121,8 @@ export class Appointments implements OnInit {
 
   updateStatus(a: any, event: Event): void {
     const status = (event.target as HTMLSelectElement).value;
+    // Invalida cache da página para refletir mudança de status
+    this.cache.invalidate(this.cacheKey(this.page));
     this.svc.update(a.id, { appointmentStatus: status } as any).subscribe({
       next: () => this.toast.info('Status atualizado!'),
       error: (e) => this.toast.error(e?.message ?? 'Erro'),
@@ -104,7 +143,8 @@ export class Appointments implements OnInit {
       next: () => {
         this.toast.success('Agendamento criado!');
         this.modalOpen = false;
-        this.load(this.page);
+        this.invalidateAllPages();
+        this.load(this.page, true);
       },
       error: (e) => {
         this.toast.error(e?.message ?? 'Erro');
@@ -121,8 +161,18 @@ export class Appointments implements OnInit {
     });
     if (!r.isConfirmed) return;
     this.svc.delete(a.id).subscribe({
-      next: () => { this.toast.success('Agendamento excluído!'); this.load(this.page); },
+      next: () => {
+        this.toast.success('Agendamento excluído!');
+        this.invalidateAllPages();
+        this.load(this.page, true);
+      },
       error: (e) => this.toast.error(e?.message ?? 'Erro'),
     });
+  }
+
+  private invalidateAllPages(): void {
+    for (let i = 0; i <= Math.ceil(this.totalElements / 12); i++) {
+      this.cache.invalidate(this.cacheKey(i));
+    }
   }
 }

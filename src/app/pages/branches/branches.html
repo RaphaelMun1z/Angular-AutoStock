@@ -4,22 +4,47 @@
       <h2 class="page-title">Filiais</h2>
       <p class="page-subtitle">Unidades e pontos de venda</p>
     </div>
-    <button class="btn-brand" (click)="openNew()">
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.5"
-        aria-hidden="true"
+    <div class="flex items-center gap-2">
+      <button
+        class="btn-secondary"
+        (click)="refresh()"
+        [disabled]="loading"
+        title="Atualizar dados"
+        aria-label="Atualizar lista de filiais"
       >
-        <line x1="12" y1="5" x2="12" y2="19" />
-        <line x1="5" y1="12" x2="19" y2="12" />
-      </svg>
-      Nova Filial
-    </button>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          [class.animate-spin]="loading"
+          aria-hidden="true"
+        >
+          <path d="M1 4v6h6M23 20v-6h-6" />
+          <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" />
+        </svg>
+        Atualizar
+      </button>
+      <button class="btn-brand" (click)="openNew()">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          aria-hidden="true"
+        >
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        Nova Filial
+      </button>
+    </div>
   </div>
+
   @if (loading) {
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       @for (i of [1, 2, 3, 4, 5, 6]; track i) {
@@ -42,9 +67,7 @@
               {{ (b.name ?? 'F')[0] }}
             </div>
             <div class="flex-1 min-w-0">
-              <div class="font-heading font-bold truncate" style="color: var(--text-primary)">
-                {{ b.name }}
-              </div>
+              <div class="font-heading font-bold truncate" style="color: var(--text-primary)">{{ b.name }}</div>
               <div class="text-xs" style="color: var(--text-muted)">{{ b.branchType ?? '—' }}</div>
             </div>
             <span class="badge badge-green">{{ b.status ?? 'Ativo' }}</span>
@@ -68,15 +91,7 @@
               (click)="delete(b)"
               [attr.aria-label]="'Excluir filial ' + b.name"
             >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                aria-hidden="true"
-              >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <polyline points="3 6 5 6 21 6" />
                 <path d="M19 6l-1 14H6L5 6" />
               </svg>
@@ -94,100 +109,74 @@
   >
     <ng-container slot="body">
       <form [formGroup]="form" class="space-y-4">
-        <p
-          class="text-xs font-bold uppercase tracking-wider font-heading"
-          style="color: var(--text-muted)"
-        >
+        <p class="text-xs font-bold uppercase tracking-wider font-heading" style="color: var(--text-muted)">
           Dados da Filial
         </p>
         <div class="grid grid-cols-2 gap-4">
           <div class="col-span-2">
-            <label class="form-label" for="br-name">Nome *</label
-            ><input
-              id="br-name"
-              class="form-input"
-              formControlName="name"
-              placeholder="Filial Centro"
-            />
+            <label class="form-label" for="br-name">Nome *</label>
+            <input id="br-name" class="form-input" formControlName="name" placeholder="Filial Centro" />
           </div>
           <div>
-            <label class="form-label" for="br-email">Email *</label
-            ><input id="br-email" type="email" class="form-input" formControlName="email" />
+            <label class="form-label" for="br-email">Email *</label>
+            <input id="br-email" type="email" class="form-input" formControlName="email" />
           </div>
           <div>
-            <label class="form-label" for="br-phone">Telefone</label
-            ><input id="br-phone" class="form-input" formControlName="phoneNumber" />
+            <label class="form-label" for="br-phone">Telefone</label>
+            <input id="br-phone" class="form-input" formControlName="phoneNumber" />
           </div>
           <div>
-            <label class="form-label" for="br-mgr">Responsável *</label
-            ><input id="br-mgr" class="form-input" formControlName="managerName" />
+            <label class="form-label" for="br-mgr">Responsável *</label>
+            <input id="br-mgr" class="form-input" formControlName="managerName" />
           </div>
           <div>
-            <label class="form-label" for="br-hours">Horário *</label
-            ><input
-              id="br-hours"
-              class="form-input"
-              formControlName="openingHours"
-              placeholder="Seg-Sex 8h-18h"
-            />
+            <label class="form-label" for="br-hours">Horário *</label>
+            <input id="br-hours" class="form-input" formControlName="openingHours" placeholder="Seg-Sex 8h-18h" />
           </div>
           <div>
-            <label class="form-label" for="br-type">Tipo *</label
-            ><input
-              id="br-type"
-              class="form-input"
-              formControlName="branchType"
-              placeholder="Concessionária"
-            />
+            <label class="form-label" for="br-type">Tipo *</label>
+            <input id="br-type" class="form-input" formControlName="branchType" placeholder="Concessionária" />
           </div>
           <div>
-            <label class="form-label" for="br-st">Status</label
-            ><input id="br-st" class="form-input" formControlName="status" placeholder="Ativo" />
+            <label class="form-label" for="br-st">Status</label>
+            <input id="br-st" class="form-input" formControlName="status" placeholder="Ativo" />
           </div>
         </div>
-        <p
-          class="text-xs font-bold uppercase tracking-wider font-heading pt-2"
-          style="color: var(--text-muted)"
-        >
+        <p class="text-xs font-bold uppercase tracking-wider font-heading pt-2" style="color: var(--text-muted)">
           Endereço
         </p>
         <div class="grid grid-cols-2 gap-4">
           <div class="col-span-2">
-            <label class="form-label" for="br-str">Rua *</label
-            ><input
-              id="br-str"
-              class="form-input"
-              formControlName="street"
-              placeholder="NOME DA RUA"
-            />
+            <label class="form-label" for="br-str">Rua *</label>
+            <input id="br-str" class="form-input" formControlName="street" placeholder="NOME DA RUA" />
           </div>
           <div>
-            <label class="form-label" for="br-num">Número *</label
-            ><input id="br-num" type="number" class="form-input" formControlName="number" />
+            <label class="form-label" for="br-num">Número *</label>
+            <input id="br-num" type="number" class="form-input" formControlName="number" />
           </div>
           <div>
-            <label class="form-label" for="br-dist">Bairro *</label
-            ><input id="br-dist" class="form-input" formControlName="district" />
+            <label class="form-label" for="br-dist">Bairro *</label>
+            <input id="br-dist" class="form-input" formControlName="district" />
           </div>
           <div>
-            <label class="form-label" for="br-city">Cidade *</label
-            ><input id="br-city" class="form-input" formControlName="city" />
+            <label class="form-label" for="br-city">Cidade *</label>
+            <input id="br-city" class="form-input" formControlName="city" />
           </div>
           <div>
-            <label class="form-label" for="br-state">Estado *</label
-            ><input id="br-state" class="form-input" formControlName="state" />
+            <label class="form-label" for="br-state">Estado *</label>
+            <input id="br-state" class="form-input" formControlName="state" />
           </div>
           <div>
-            <label class="form-label" for="br-country">País *</label
-            ><input id="br-country" class="form-input" formControlName="country" />
+            <label class="form-label" for="br-country">País *</label>
+            <input id="br-country" class="form-input" formControlName="country" />
           </div>
           <div>
-            <label class="form-label" for="br-cep">CEP</label
-            ><input id="br-cep" class="form-input" formControlName="cep" />
+            <label class="form-label" for="br-cep">CEP</label>
+            <input id="br-cep" class="form-input" formControlName="cep" />
           </div>
           <div>
-            <label class="form-label" for="br-comp">Complemento</label
-            ><input id="br-comp" class="form-input" formControlName="complement" />
+            <label class="form-label" for="br-comp">Complemento</label>
+            <input id="br-comp" class="form-input" formControlName="complement" />
           </div>
         </div>
       </form>

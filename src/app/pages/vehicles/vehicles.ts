@@ -9,10 +9,10 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormsModule } from '@angular/forms';
 import { VehicleService } from '../../services/business.service';
 import { ToastService } from '../../core/services/toast.service';
+import { CacheService } from '../../services/cache.service';
 import { Vehicle } from '../../shared/interfaces/models.interface';
 import {
   formatCurrency,
-  formatDate,
   availabilityClass,
   availabilityLabel,
   vehicleStatusClass,
@@ -33,10 +33,11 @@ import { Pagination } from '../../shared/components/pagination/pagination';
 export class Vehicles implements OnInit {
   private svc = inject(VehicleService);
   private toast = inject(ToastService);
+  private cache = inject(CacheService);
   private fb = inject(FormBuilder);
   private cdr = inject(ChangeDetectorRef);
 
-  loading = true;
+  loading = false;
   saving = false;
   modalOpen = false;
   items: Vehicle[] = [];
@@ -81,15 +82,31 @@ export class Vehicles implements OnInit {
     this.load();
   }
 
-  load(page = 0): void {
-    this.loading = true;
+  private cacheKey(page: number): string {
+    return `vehicles_page_${page}`;
+  }
+
+  load(page = 0, forceRefresh = false): void {
     this.page = page;
+    const key = this.cacheKey(page);
+
+    if (!forceRefresh && this.cache.has(key)) {
+      const cached = this.cache.get<{ items: Vehicle[]; total: number }>(key)!;
+      this.items = cached.items;
+      this.totalElements = cached.total;
+      this.applyFilter();
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.loading = true;
     this.cdr.markForCheck();
 
     this.svc.getAll(page).subscribe({
       next: (r) => {
         this.items = (r as any)?._embedded?.vehicleResponseDTOList ?? [];
         this.totalElements = (r as any)?.page?.totalElements ?? 0;
+        this.cache.set(key, { items: this.items, total: this.totalElements });
         this.applyFilter();
         this.loading = false;
         this.cdr.markForCheck();
@@ -99,6 +116,11 @@ export class Vehicles implements OnInit {
         this.cdr.markForCheck();
       },
     });
+  }
+
+  refresh(): void {
+    this.cache.invalidate(this.cacheKey(this.page));
+    this.load(this.page, true);
   }
 
   onSearch(): void {
@@ -162,7 +184,8 @@ export class Vehicles implements OnInit {
         this.toast.success(this.editId ? 'Veículo atualizado!' : 'Veículo cadastrado!');
         this.modalOpen = false;
         this.saving = false;
-        this.load(this.page);
+        this.cache.invalidate(this.cacheKey(this.page));
+        this.load(this.page, true);
       },
       error: (e) => {
         this.toast.error(e?.message ?? 'Erro ao salvar');
@@ -186,9 +209,16 @@ export class Vehicles implements OnInit {
     this.svc.delete(v.id!).subscribe({
       next: () => {
         this.toast.success('Veículo excluído!');
-        this.load(this.page);
+        this.invalidateAllPages();
+        this.load(this.page, true);
       },
       error: (e) => this.toast.error(e?.message ?? 'Erro ao excluir'),
     });
+  }
+
+  private invalidateAllPages(): void {
+    for (let i = 0; i <= Math.ceil(this.totalElements / 12); i++) {
+      this.cache.invalidate(this.cacheKey(i));
+    }
   }
 }
