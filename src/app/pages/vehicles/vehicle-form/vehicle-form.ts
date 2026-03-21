@@ -8,13 +8,19 @@ import {
   inject,
   ChangeDetectorRef,
   ChangeDetectionStrategy,
+  OnInit,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ToastService } from '../../../core/services/toast.service';
 import { VehicleService } from '../../../services/vehicle.service';
 import { Modal } from '../../../shared/components/modal/modal';
-import { VehicleResponseDTO, Vehicle, BranchResponseDTO, PagedResponse } from '../../../shared/interfaces/models.interface';
+import {
+  VehicleResponseDTO,
+  Vehicle,
+  BranchResponseDTO,
+  PagedResponse,
+} from '../../../shared/interfaces/models.interface';
 import { catchError, of } from 'rxjs';
 import { BranchService } from '../../../services/branch.service';
 
@@ -24,7 +30,7 @@ import { BranchService } from '../../../services/branch.service';
   templateUrl: './vehicle-form.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class VehicleForm implements OnChanges {
+export class VehicleForm implements OnChanges, OnInit {
   @Input() isOpen = false;
   @Input() vehicle: VehicleResponseDTO | null = null;
 
@@ -118,6 +124,10 @@ export class VehicleForm implements OnChanges {
           );
         }
 
+        if (formVals.branch && formVals.branch.id) {
+          formVals.branchId = formVals.branch.id;
+        }
+
         this.form.patchValue(formVals);
       } else {
         this.modalStep = 1;
@@ -140,6 +150,8 @@ export class VehicleForm implements OnChanges {
           hasAccessibility: false,
         });
       }
+
+      this.cdr.markForCheck();
     }
   }
 

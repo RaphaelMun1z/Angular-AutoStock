@@ -281,23 +281,29 @@
   </ng-container>
   
   <ng-container slot="footer">
-    @if (modalStep === 1 || (modalStep === 2 && vehicle)) {
+    @if (modalStep === 1 || (modalStep === 2 && !vehicle)) {
+      <button class="btn-secondary" (click)="close()">Cancelar</button>
+    } @else if (modalStep === 2 && vehicle) {
       <button class="btn-secondary" (click)="close()">Cancelar</button>
     } @else if (modalStep > 1) {
       <button class="btn-secondary" (click)="prevStep()">Voltar</button>
     }
     
-    @if (modalStep > 1 && modalStep < maxSteps) {
-      <button class="btn-brand" (click)="nextStep()">Avançar</button>
-    } @else if (modalStep === maxSteps) {
-      <button class="btn-brand" (click)="save()" [disabled]="saving">
-        @if (saving) {
-          <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="30 60" stroke-linecap="round" />
-          </svg>
-        }
-        Finalizar
-      </button>
-    }
+    <div class="flex gap-2">
+      @if (modalStep > 1 && modalStep < maxSteps) {
+        <button class="btn-secondary" style="border: 1px solid var(--brand); color: var(--brand)" (click)="nextStep()">Avançar</button>
+      }
+      
+      @if (modalStep === maxSteps || (vehicle && modalStep >= 2)) {
+        <button class="btn-brand" (click)="save()" [disabled]="saving">
+          @if (saving) {
+            <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="30 60" stroke-linecap="round" />
+            </svg>
+          }
+          {{ vehicle ? 'Salvar Alterações' : 'Finalizar' }}
+        </button>
+      }
+    </div>
   </ng-container>
 </app-modal>

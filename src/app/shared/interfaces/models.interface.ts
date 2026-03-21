@@ -96,6 +96,42 @@ export interface VehicleSpecificDetail {
   detail: string;
 }
 
+// Interfaces de Branch movidas para cima para poderem ser usadas dentro do Vehicle
+export interface BranchAddress {
+  id?: string;
+  street: string;
+  number: number;
+  district: string;
+  city: string;
+  state: string;
+  country: string;
+  cep?: string;
+  complement?: string;
+}
+
+export interface BranchAddressResponseDTO extends BranchAddress {
+  _links?: Links;
+}
+
+export interface Branch {
+  id?: string;
+  name: string;
+  phoneNumber?: string;
+  email: string;
+  managerName: string;
+  openingHours: string;
+  branchType: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  address: BranchAddress;
+}
+
+export interface BranchResponseDTO extends Omit<Branch, 'address'> {
+  address?: BranchAddressResponseDTO;
+  _links?: Links;
+}
+
 export interface Vehicle {
   id?: string;
   brand: string;
@@ -139,6 +175,9 @@ export interface Vehicle {
   hullMaterial?: string;
   autonomy?: number;
   usage?: string;
+  branchId?: string;
+  // A propriedade abaixo resolve o erro no HTML do vehicles.ts
+  branch?: BranchResponseDTO; 
   specificDetails?: VehicleSpecificDetail[];
   images?: VehicleImageFile[];
 }
@@ -268,41 +307,6 @@ export interface Contract {
 
 export interface ContractResponseDTO extends Omit<Contract, 'sale'> {
   sale?: SaleResponseDTO;
-  _links?: Links;
-}
-
-export interface BranchAddress {
-  id?: string;
-  street: string;
-  number: number;
-  district: string;
-  city: string;
-  state: string;
-  country: string;
-  cep?: string;
-  complement?: string;
-}
-
-export interface BranchAddressResponseDTO extends BranchAddress {
-  _links?: Links;
-}
-
-export interface Branch {
-  id?: string;
-  name: string;
-  phoneNumber?: string;
-  email: string;
-  managerName: string;
-  openingHours: string;
-  branchType: string;
-  status?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  address: BranchAddress;
-}
-
-export interface BranchResponseDTO extends Omit<Branch, 'address'> {
-  address?: BranchAddressResponseDTO;
   _links?: Links;
 }
 

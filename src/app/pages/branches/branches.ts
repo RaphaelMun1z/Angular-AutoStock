@@ -18,11 +18,10 @@ import {
   Branch,
   BranchAddress
 } from '../../shared/interfaces/models.interface';
-import { Pagination } from '../../shared/components/pagination/pagination';
 
 @Component({
   selector: 'app-branches',
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, Modal, Pagination],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, Modal],
   templateUrl: './branches.html',
   styleUrl: './branches.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

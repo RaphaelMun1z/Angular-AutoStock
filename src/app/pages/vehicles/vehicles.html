@@ -88,6 +88,7 @@
         <option value="VAN">Van</option>
         <option value="BUS">Ônibus</option>
         <option value="BOAT">Barco</option>
+        <option value="OTHER_VEHICLE_TYPE">Outros</option>
       </select>
     </div>
 
@@ -103,7 +104,7 @@
             <th scope="col">Preço</th>
             <th scope="col">Status</th>
             <th scope="col">Disponibilidade</th>
-            <th scope="col"><span class="sr-only">Ações</span></th>
+            <th scope="col" class="text-right">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -136,9 +137,17 @@
                   <div class="text-xs" style="color: var(--text-muted)">{{ v.color }}</div>
                 </td>
                 <td>
-                  <span class="badge badge-blue">{{ v.type }}</span>
+                  <!-- BADGE DO TIPO DE VEÍCULO -->
+                  <span
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider"
+                    [style.backgroundColor]="getTypeConfig(v.type).bg"
+                    [style.color]="getTypeConfig(v.type).text"
+                  >
+                    <span aria-hidden="true" class="text-sm">{{ getTypeConfig(v.type).icon }}</span>
+                    {{ getTypeConfig(v.type).label }}
+                  </span>
                 </td>
-                <td>{{ v.manufactureYear ? getYear(v.manufactureYear) : '—' }}</td>
+                <td>{{ getYear(v.manufactureYear) }}</td>
                 <td>{{ fuelLabel(v.fuelType) }}</td>
                 <td class="font-mono text-xs">{{ fmtMileage(v.mileage) }}</td>
                 <td class="font-semibold" style="color: #4ade80">{{ fmtCurrency(v.salePrice) }}</td>
@@ -153,21 +162,22 @@
                   }}</span>
                 </td>
                 <td>
-                  <div class="flex gap-1.5">
-                    <button
-                      class="btn-edit"
-                      (click)="openEdit(v)"
-                      [attr.aria-label]="'Editar ' + v.brand + ' ' + v.model"
-                    >
-                      Editar
+                  <div class="flex justify-end gap-1.5">
+                    <button class="btn-secondary px-2" (click)="openView(v)" title="Ver Detalhes">
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
                     </button>
-                    <button
-                      class="btn-danger"
-                      (click)="delete(v)"
-                      [attr.aria-label]="'Excluir ' + v.brand + ' ' + v.model"
-                    >
-                      Excluir
-                    </button>
+                    <button class="btn-edit px-3" (click)="openEdit(v)">Editar</button>
+                    <button class="btn-danger px-3" (click)="delete(v)">Excluir</button>
                   </div>
                 </td>
               </tr>
@@ -181,9 +191,9 @@
       class="p-4 flex flex-wrap items-center justify-between gap-3"
       style="border-top: 1px solid var(--surface-border)"
     >
-      <span class="text-xs" style="color: var(--text-muted)">
-        {{ totalElements }} veículo(s) encontrado(s)
-      </span>
+      <span class="text-xs" style="color: var(--text-muted)"
+        >{{ totalElements }} veículo(s) encontrado(s)</span
+      >
       <app-pagination
         [totalElements]="totalElements"
         [pageSize]="12"
@@ -199,4 +209,10 @@
     (closed)="modalOpen = false"
     (saved)="onSaved()"
   ></app-vehicle-form>
+
+  <app-vehicle-view
+    [isOpen]="viewModalOpen"
+    [vehicle]="viewVehicle"
+    (closed)="viewModalOpen = false"
+  ></app-vehicle-view>
 </div>
